@@ -1,0 +1,23 @@
+$font-stack:    Helvetica, sans-serif;
+$primary-color: #fafafa;
+
+body, html {
+  height: 100%;
+  background-color: $primary-color;
+  font: 100% $font-stack;
+}
+
+#sockready{
+  display: none;
+
+}
+#map-canvas{
+  height: 100%;
+}
+
+#testbt{
+  height: 30px;
+  width: 30px;
+  position: absolute;
+  display: inline;
+}
