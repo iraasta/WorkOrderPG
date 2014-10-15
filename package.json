@@ -19,7 +19,8 @@
     "grunt-contrib-watch": "^0.6.1",
     "grunt-phonegap": "^0.15.2",
     "grunt-shell": "^1.1.1",
-    "mocha": "^1.21.4"
+    "mocha": "^1.21.4",
+    "underscore" : "latest"
   },
   "author": "Neon Tree Solutions Ltd",
   "license": "ISC"
