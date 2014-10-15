@@ -29,7 +29,7 @@ module.exports = (grunt)->
     watch:
       scripts:{
         files: ['www/src/**/*'],
-        tasks: ['browserify', 'sass'],
+        tasks: ['browserify', 'sass', 'run:android'],
         options:
           livereload: true
       }

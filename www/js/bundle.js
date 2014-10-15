@@ -1416,7 +1416,7 @@
 }.call(this));
 
 },{}],2:[function(require,module,exports){
-var MapAdapter, Route, events, getTestValues, initSocket, initialize, map, route;
+var GPS, LatLng, MapAdapter, ProgressPanel, Route, drawAll, events, getTestPosition, getTestValues, gps, initSocket, initialize, map, progress, route, sock;
 
 require("../model/logger.coffee");
 
@@ -1426,38 +1426,57 @@ Route = require("./../model/route.coffee").Route;
 
 MapAdapter = require("./../model/map.coffee").MapAdapter;
 
-route = map = null;
+GPS = require("./../model/gps.coffee").GPS;
+
+ProgressPanel = require("./../model/progressPanel.coffee").ProgressPanel;
+
+LatLng = google.maps.LatLng;
+
+route = progress = map = gps = sock = null;
 
 initSocket = function() {
-  var local, remote, sock;
+  var local, remote;
   local = "127.0.0.1:9000";
-  remote = 'http://192.168.1.116:9000/';
+  remote = 'http://104.131.55.190:9001/';
   sock = io.connect(remote);
   sock.on("connect", function() {
-    return $("#sockready").show();
+    console.log("connected");
+    sock.emit(events.logindriver, ["test@test.com", "w1"]);
+    return gps.every(5000, function(e, p) {
+      return drawAll();
+    });
+  });
+  sock.on(events.success, function(success) {
+    if (success) {
+      return console.log("success");
+    }
+  });
+  sock.on(events.failure, function(success) {
+    if (success) {
+      return console.log("falure");
+    }
   });
   return sock.on(events.workorder, function(data) {
     var alreadyAcquired, objectives;
+    map.raw_map.get;
     objectives = data[0], alreadyAcquired = data[1];
-    route = new Route(objectives, alreadyAcquired);
-    return route.draw(map);
+    console.log([objectives, alreadyAcquired]);
+    route.points = objectives;
+    return drawAll();
   });
 };
 
 initialize = function() {
-  var alreadyAcquired, i, objectives, _ref;
+  gps = new GPS();
   map = new MapAdapter("map-canvas");
-  _ref = getTestValues(), objectives = _ref[0], alreadyAcquired = _ref[1];
-  route = new Route(objectives, alreadyAcquired, map);
-  route.draw(new google.maps.LatLng(41.75, -87.85));
-  i = 0;
-  setInterval((function(_this) {
-    return function() {
-      route.acquire(i++);
-      return route.draw(new google.maps.LatLng(41.75, -87.85));
+  route = new Route([], 0, map);
+  progress = new ProgressPanel($("#testbt"));
+  initSocket();
+  return gps.every(60000, (function(_this) {
+    return function(a, b) {
+      return sock.emit(events.position, [b.coords.latitude, b.coords.longitude]);
     };
-  })(this), 3000);
-  return initSocket();
+  })(this));
 };
 
 google.maps.event.addDomListener(window, 'load', initialize);
@@ -1490,9 +1509,25 @@ getTestValues = function() {
   return [objectives, []];
 };
 
+getTestPosition = function() {
+  var posx, posy;
+  posx = -33.8684944;
+  posy = 151.20788250000007;
+  return new LatLng(posx, posy);
+};
+
+drawAll = function() {
+  if (route != null) {
+    route.draw(getTestPosition());
+    if (route.checkIfAcquired(getTestPosition())) {
+      return progress.draw(route.points, route.alreadyAcquired);
+    }
+  }
+};
 
 
-},{"../model/events.coffee":4,"../model/logger.coffee":5,"./../model/map.coffee":6,"./../model/route.coffee":7}],3:[function(require,module,exports){
+
+},{"../model/events.coffee":4,"../model/logger.coffee":6,"./../model/gps.coffee":5,"./../model/map.coffee":7,"./../model/progressPanel.coffee":8,"./../model/route.coffee":9}],3:[function(require,module,exports){
 require("./controller/index.coffee");
 
 
@@ -1512,6 +1547,42 @@ module.exports = {
 
 
 },{}],5:[function(require,module,exports){
+var GPS;
+
+GPS = (function() {
+  function GPS() {}
+
+  GPS.prototype.getPosition = function(cb) {
+    return navigator.geolocation.getCurrentPosition(function(position) {
+      return cb(null, position);
+    }, function(error) {
+      return cb(error, null);
+    });
+  };
+
+  GPS.prototype.getLatLng = function(cb) {
+    return this.getPosition(function(err, position) {
+      return cb(new google.maps.LatLng(position.coords.latitude, position.coords.longitude));
+    });
+  };
+
+  GPS.prototype.every = function(num, cb) {
+    return setInterval(((function(_this) {
+      return function() {
+        return _this.getPosition(cb);
+      };
+    })(this)), num);
+  };
+
+  return GPS;
+
+})();
+
+module.exports.GPS = GPS;
+
+
+
+},{}],6:[function(require,module,exports){
 var Logger, util;
 
 util = require("util");
@@ -1565,7 +1636,7 @@ module.exports = Logger;
 
 
 
-},{"util":11}],6:[function(require,module,exports){
+},{"util":13}],7:[function(require,module,exports){
 var MapAdapter;
 
 MapAdapter = (function() {
@@ -1602,8 +1673,39 @@ module.exports.MapAdapter = MapAdapter;
 
 
 
-},{}],7:[function(require,module,exports){
-var LatLng, Route, _;
+},{}],8:[function(require,module,exports){
+var ProgressPanel;
+
+ProgressPanel = (function() {
+  function ProgressPanel(panel) {
+    this.panel = panel;
+  }
+
+  ProgressPanel.prototype.draw = function(points, acquired) {
+    var aldone, i, percentage;
+    aldone = (function() {
+      var _i, _results;
+      _results = [];
+      for (i = _i = 0; 0 <= acquired ? _i < acquired : _i > acquired; i = 0 <= acquired ? ++_i : --_i) {
+        _results.push(String.fromCharCode("A".charCodeAt(0) + i));
+      }
+      return _results;
+    })();
+    console.log(aldone);
+    percentage = acquired / points.length * 100;
+    return this.panel.html("" + (percentage.toFixed(2)) + "% <br/> Reached: " + (aldone.join(", ")));
+  };
+
+  return ProgressPanel;
+
+})();
+
+module.exports.ProgressPanel = ProgressPanel;
+
+
+
+},{}],9:[function(require,module,exports){
+var LatLng, Route, getDistance, rad, _;
 
 _ = require("underscore");
 
@@ -1612,34 +1714,55 @@ LatLng = google.maps.LatLng;
 Route = (function() {
   function Route(points, alreadyAcquired, map) {
     this.points = points;
-    this.alreadyAcquired = alreadyAcquired;
+    this.alreadyAcquired = 0;
     this.directionsService = new google.maps.DirectionsService();
     this.map = map;
-    this.directionsDisplay = new google.maps.DirectionsRenderer();
-    this.acquireCb = function() {};
+    this.directionsDisplay = new google.maps.DirectionsRenderer({
+      preserveViewport: true
+    });
   }
 
-  Route.prototype.acquire = function(point) {
-    return this.alreadyAcquired.push(point);
+  Route.prototype.checkIfAcquired = function(pos) {
+    var point1, point2;
+    if (this.points.length === 0) {
+      return;
+    }
+    point1 = {
+      lat: pos.lat(),
+      lng: pos.lng()
+    };
+    point2 = this.points[this.alreadyAcquired];
+    if (getDistance(point1, point2) < 5000) {
+      this.acquire();
+      return true;
+    } else {
+      return false;
+    }
   };
 
-  Route.prototype.setOnAcquire = function(cb) {
-    return this.acquireCb = cb;
+  Route.prototype.acquire = function() {
+    if (this.points.length === this.alreadyAcquired) {
+      return "done!";
+    } else {
+      return this.alreadyAcquired++;
+    }
   };
 
   Route.prototype.draw = function(position) {
-    var max, request;
+    var request;
+    this.map.raw_map.setZoom(15);
+    this.map.raw_map.panTo(position);
+    if (this.points.length === 0) {
+      return;
+    }
     this.directionsDisplay.setDirections({
       routes: []
     });
-    max = -1;
-    if (this.alreadyAcquired.length > 0) {
-      max = _.max(this.alreadyAcquired);
-    }
     this.directionsDisplay.setMap(this.map.raw_map);
+    this.directionsDisplay.setPanel(document.getElementById('directions-panel'));
     request = {
       origin: position,
-      destination: new LatLng(this.points[max + 1].lat, this.points[max + 1].lng),
+      destination: new LatLng(this.points[this.alreadyAcquired].lat, this.points[this.alreadyAcquired].lng),
       travelMode: google.maps.TravelMode.DRIVING
     };
     return this.directionsService.route(request, (function(_this) {
@@ -1648,7 +1771,7 @@ Route = (function() {
           console.log(_this);
           return _this.directionsDisplay.setDirections(result);
         } else {
-          return console.log("Failed");
+          return console.log("Failed directions...");
         }
       };
     })(this));
@@ -1660,9 +1783,24 @@ Route = (function() {
 
 exports.Route = Route;
 
+rad = function(x) {
+  return x * Math.PI / 180;
+};
+
+getDistance = function(p1, p2) {
+  var R, a, c, d, dLat, dLong;
+  R = 6378137;
+  dLat = rad(p2.lat - p1.lat);
+  dLong = rad(p2.lng - p1.lng);
+  a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(rad(p1.lat)) * Math.cos(rad(p2.lat)) * Math.sin(dLong / 2) * Math.sin(dLong / 2);
+  c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  d = R * c;
+  return d;
+};
 
 
-},{"underscore":1}],8:[function(require,module,exports){
+
+},{"underscore":1}],10:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -1687,7 +1825,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 // shim for using process in browser
 
 var process = module.exports = {};
@@ -1752,14 +1890,14 @@ process.chdir = function (dir) {
     throw new Error('process.chdir is not supported');
 };
 
-},{}],10:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 module.exports = function isBuffer(arg) {
   return arg && typeof arg === 'object'
     && typeof arg.copy === 'function'
     && typeof arg.fill === 'function'
     && typeof arg.readUInt8 === 'function';
 }
-},{}],11:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 (function (process,global){
 // Copyright Joyent, Inc. and other Node contributors.
 //
@@ -2349,4 +2487,4 @@ function hasOwnProperty(obj, prop) {
 }
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":10,"_process":9,"inherits":8}]},{},[3]);
+},{"./support/isBuffer":12,"_process":11,"inherits":10}]},{},[3]);

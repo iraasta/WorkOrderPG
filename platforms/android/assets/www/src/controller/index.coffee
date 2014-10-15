@@ -2,33 +2,47 @@ require "../model/logger.coffee"
 events = require "../model/events.coffee"
 {Route} = require "./../model/route.coffee"
 {MapAdapter}   = require "./../model/map.coffee"
+{GPS} = require "./../model/gps.coffee"
+{ProgressPanel} = require "./../model/progressPanel.coffee"
+LatLng = google.maps.LatLng;
 
-route = map = null;
+route = progress = map = gps = sock  =  null;
 
 initSocket = ()->
   local = "127.0.0.1:9000"
-  remote = 'http://192.168.1.116:9000/';
+  remote = 'http://104.131.55.190:9001/';
   sock = io.connect(remote);
   sock.on("connect", () ->
-    $("#sockready").show();
+    console.log("connected")
+    sock.emit events.logindriver, ["test@test.com", "w1"]
 
+    gps.every(5000, (e,p) ->
+      drawAll()
+
+    )
   )
+
+  sock.on events.success, (success) ->
+    console.log("success") if success
+  sock.on events.failure, (success) ->
+    console.log("falure") if success
   sock.on events.workorder, (data) ->
+    map.raw_map.get
     [objectives, alreadyAcquired] = data
-    route = new Route(objectives, alreadyAcquired)
-    route.draw(map)
+    console.log([objectives, alreadyAcquired])
+    route.points = objectives
+    drawAll()
+
 
 initialize = () ->
+  gps = new GPS();
   map = new MapAdapter("map-canvas");
-  [objectives, alreadyAcquired] = getTestValues();
-  route = new Route(objectives, alreadyAcquired, map)
-  route.draw(new google.maps.LatLng(41.75,-87.85))
-  i = 0;
-  setInterval( ()=>
-    route.acquire(i++);
-    route.draw(new google.maps.LatLng(41.75,-87.85))
-  , 3000)
+  route = new Route([], 0, map)
+  progress = new ProgressPanel($("#testbt"))
+
   initSocket();
+  gps.every(60000, (a,b) => sock.emit(events.position, [b.coords.latitude, b.coords.longitude]))
+
 
 google.maps.event.addDomListener(window, 'load', initialize);
 
@@ -42,3 +56,13 @@ getTestValues = ()->
   objectives[3] = {lat: posx-3, lng: posy-3, midpoints: []}
   [objectives,[]]
 
+getTestPosition =()->
+  posx = -33.8684944
+  posy= 151.20788250000007
+  new LatLng(posx, posy)
+
+drawAll = ()->
+  if route?
+    route.draw(getTestPosition())
+    if route.checkIfAcquired(getTestPosition())
+      progress.draw(route.points, route.alreadyAcquired)

@@ -161,11 +161,14 @@
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/resources \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/config.js \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/view \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/progressPanel.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/route.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/config.coffee \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/test.ls \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/events.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/logger.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/map.coffee \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/gps.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/controller/index.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/resources/values \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/resources/values/strings.coffee \
