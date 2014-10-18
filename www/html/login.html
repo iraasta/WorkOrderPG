@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+<div data-role="dialog" id="login">
+    <!-- start header -->
+    <div data-role="header">
+        <h1>Login</h1>
+        <a href="/" class="ui-btn-right">Cancel</a>
+    </div>
+    <!-- end header -->
+    <!-- start content -->
+    <div data-role="content" data-inset="true">
+
+        <form id="login-form">
+            <fieldset>
+
+                <label for="email">Email:</label>
+                <input type="email" name="email" id="email" value=""  />
+
+                <label for="password">Password:</label>
+                <input type="password" name="password" id="password" value="" />
+
+                <input id="submit" type="submit" value="Login" data-role="button" data-inline="true" data-theme="b" />
+
+                <hr />
+                Don't have a login? <a href="register.aspx">Sign Up</a>
+            </fieldset>
+        </form>
+
+    </div>
+    <!-- end content -->
+</div>
+</body>
+</html>
