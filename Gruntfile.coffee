@@ -29,7 +29,7 @@ module.exports = (grunt)->
     watch:
       scripts:{
         files: ['www/src/**/*'],
-        tasks: ['browserify', 'sass', 'run:android'],
+        tasks: ['browserify', 'sass'] #, 'run:android'],
         options:
           livereload: true
       }
@@ -44,7 +44,6 @@ module.exports = (grunt)->
           base: 'www'
           open: true
   });
-
   grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-phonegap');
   grunt.loadNpmTasks 'grunt-contrib-connect'
@@ -56,16 +55,23 @@ module.exports = (grunt)->
     grunt.task.run 'connect:server'
     grunt.task.run 'watch:all'
 
-  grunt.task.registerTask "browserify", "Default task", ->
+  grunt.task.registerTask "browserify", "Bundle all js files", ->
     done = this.async();
     exec("browserify -t coffeeify www/src/index.coffee > www/js/bundle.js", (err, stderr, stdout) ->
       grunt.log.write "stderr:: #{stderr}" if stderr?
       grunt.log.write "stdout:: #{stdout}" if stdout?
       done();
     )
-  grunt.task.registerTask "run", "Default task", (target)->
+  grunt.task.registerTask "run", "Run on device", (target)->
     done = this.async();
     exec("cordova run #{target}", (err, stderr, stdout) ->
+      grunt.log.write "stderr:: #{stderr}"
+      grunt.log.write "stdout:: #{stdout}"
+      done();
+    )
+  grunt.task.registerTask "test", "Test with mocha", (target)->
+    done = this.async();
+    exec("npm test", (err, stderr, stdout) ->
       grunt.log.write "stderr:: #{stderr}"
       grunt.log.write "stdout:: #{stdout}"
       done();

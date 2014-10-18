@@ -8,7 +8,18 @@ body, html {
 }
 
 
-.page-map, .ui-content { width: 100%; height: 93%; padding: 0; }
+.page-map { width: 100%; height: 93%; padding: 0; }
+
+.page-map  {
+  width: 100%;
+  height: 93%;
+  padding: 0; }
+
+#cont {
+  width: 100%;
+  height: 93%;
+  padding: 0;}
+
 #map-canvas {
   width: 90%;
   height: 97%;
@@ -37,5 +48,6 @@ body, html {
   border: solid 1px darkgray;
 }
 #menu-bt{
-  height: 10px;
+  height: 15px;
+  margin: 0 auto;
 }

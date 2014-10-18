@@ -1416,7 +1416,11 @@
 }.call(this));
 
 },{}],2:[function(require,module,exports){
-var GPS, LatLng, MapAdapter, ProgressPanel, Route, drawAll, events, getTestPosition, getTestValues, gps, initSocket, initialize, map, progress, route, sock;
+var DEBUG, GPS, LatLng, MapAdapter, ProgressPanel, Route, drawAll, events, getPosition, gps, handleLogin, initSocket, initialize, lastposition, map, progress, route, sock, trackBtClicked, trackme, yourPos;
+
+yourPos = null;
+
+DEBUG = false;
 
 require("../model/logger.coffee");
 
@@ -1433,6 +1437,8 @@ ProgressPanel = require("./../model/progressPanel.coffee").ProgressPanel;
 LatLng = google.maps.LatLng;
 
 route = progress = map = gps = sock = null;
+
+trackme = lastposition = null;
 
 initSocket = function() {
   var local, remote;
@@ -1458,7 +1464,7 @@ initSocket = function() {
   });
   return sock.on(events.workorder, function(data) {
     var alreadyAcquired, objectives;
-    map.raw_map.get;
+    console.log(data);
     objectives = data[0], alreadyAcquired = data[1];
     console.log([objectives, alreadyAcquired]);
     route.points = objectives;
@@ -1472,57 +1478,74 @@ initialize = function() {
   route = new Route([], 0, map);
   progress = new ProgressPanel($("#testbt"));
   initSocket();
-  return gps.every(60000, (function(_this) {
+  gps.every(60000, (function(_this) {
     return function(a, b) {
       return sock.emit(events.position, [b.coords.latitude, b.coords.longitude]);
     };
   })(this));
+  google.maps.event.addListener(map, 'drag', function() {
+    return trackBtClicked();
+  });
+  $("#track-bt").on("click", trackBtClicked);
+  getPosition(function(latlng) {
+    return route.pan(latlng);
+  });
+  return setTimeout(handleLogin, 2000);
 };
 
 google.maps.event.addDomListener(window, 'load', initialize);
 
-getTestValues = function() {
+getPosition = function(cb) {
   var objectives, posx, posy;
-  posx = 41.850033;
-  posy = -87.6500523;
-  objectives = [];
-  objectives[0] = {
-    lat: posx,
-    lng: posy,
-    midpoints: []
-  };
-  objectives[1] = {
-    lat: posx - 1,
-    lng: posy - 1,
-    midpoints: []
-  };
-  objectives[2] = {
-    lat: posx - 2,
-    lng: posy - 2,
-    midpoints: []
-  };
-  objectives[3] = {
-    lat: posx - 3,
-    lng: posy - 3,
-    midpoints: []
-  };
-  return [objectives, []];
-};
-
-getTestPosition = function() {
-  var posx, posy;
-  posx = -33.8684944;
-  posy = 151.20788250000007;
-  return new LatLng(posx, posy);
+  if (DEBUG) {
+    posx = 41.850033;
+    posy = -73.93;
+    objectives = [];
+    lastposition = new LatLng(posx, posy);
+    return cb(new LatLng(posx, posy));
+  } else {
+    return gps.getLatLng(function(latlng) {
+      lastposition = latlng;
+      return cb(latlng);
+    });
+  }
 };
 
 drawAll = function() {
-  if (route != null) {
-    route.draw(getTestPosition());
-    if (route.checkIfAcquired(getTestPosition())) {
-      return progress.draw(route.points, route.alreadyAcquired);
+  return getPosition(function(pos) {
+    if (route) {
+      route.draw(pos);
+      if (route.checkIfAcquired(pos)) {
+        progress.draw(route.points, route.alreadyAcquired);
+      }
     }
+    if (trackme) {
+      return route.pan(lastposition);
+    }
+  });
+};
+
+trackBtClicked = function() {
+  var bt, c;
+  bt = $("#track-bt");
+  c = "ui-btn-active";
+  if (bt.hasClass(c)) {
+    bt.removeClass(c);
+    return trackme = false;
+  } else {
+    bt.addClass(c);
+    trackme = true;
+    return drawAll();
   }
+};
+
+handleLogin = function() {
+  $("body").pagecontainer("change", "#login", {
+    role: "dialog"
+  });
+  return $("#submit").on("click", function() {
+    return console.log("LOL");
+  });
 };
 
 
@@ -1740,6 +1763,11 @@ Route = (function() {
     }
   };
 
+  Route.prototype.pan = function(position) {
+    this.map.raw_map.setZoom(17);
+    return this.map.raw_map.panTo(position);
+  };
+
   Route.prototype.acquire = function() {
     if (this.points.length === this.alreadyAcquired) {
       return "done!";
@@ -1750,8 +1778,6 @@ Route = (function() {
 
   Route.prototype.draw = function(position) {
     var request;
-    this.map.raw_map.setZoom(15);
-    this.map.raw_map.panTo(position);
     if (this.points.length === 0) {
       return;
     }

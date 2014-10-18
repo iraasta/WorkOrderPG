@@ -1,3 +1,6 @@
+yourPos = null
+DEBUG = false;
+
 require "../model/logger.coffee"
 events = require "../model/events.coffee"
 {Route} = require "./../model/route.coffee"
@@ -7,6 +10,7 @@ events = require "../model/events.coffee"
 LatLng = google.maps.LatLng;
 
 route = progress = map = gps = sock  =  null;
+trackme  = lastposition = null;
 
 initSocket = ()->
   local = "127.0.0.1:9000"
@@ -27,12 +31,11 @@ initSocket = ()->
   sock.on events.failure, (success) ->
     console.log("falure") if success
   sock.on events.workorder, (data) ->
-    map.raw_map.get
+    console.log(data);
     [objectives, alreadyAcquired] = data
     console.log([objectives, alreadyAcquired])
     route.points = objectives
     drawAll()
-
 
 initialize = () ->
   gps = new GPS();
@@ -42,27 +45,52 @@ initialize = () ->
 
   initSocket();
   gps.every(60000, (a,b) => sock.emit(events.position, [b.coords.latitude, b.coords.longitude]))
+  google.maps.event.addListener map, 'drag', () -> trackBtClicked()
+  $("#track-bt").on "click", trackBtClicked
+  getPosition (latlng) -> route.pan(latlng)
+
+
+  setTimeout handleLogin, 2000
 
 
 google.maps.event.addDomListener(window, 'load', initialize);
 
-getTestValues = ()->
-  posx = 41.850033
-  posy= -87.6500523
-  objectives = []
-  objectives[0] = {lat: posx, lng: posy, midpoints: []}
-  objectives[1] = {lat: posx-1, lng: posy-1, midpoints: []}
-  objectives[2] = {lat: posx-2, lng: posy-2, midpoints: []}
-  objectives[3] = {lat: posx-3, lng: posy-3, midpoints: []}
-  [objectives,[]]
-
-getTestPosition =()->
-  posx = -33.8684944
-  posy= 151.20788250000007
-  new LatLng(posx, posy)
+getPosition =(cb)->
+  if(DEBUG)
+    posx = 41.850033
+    posy= -73.93
+    objectives = []
+    lastposition = new LatLng(posx, posy)
+    cb new LatLng(posx, posy)
+  else
+    gps.getLatLng (latlng)->
+      lastposition = latlng;
+      cb(latlng)
 
 drawAll = ()->
-  if route?
-    route.draw(getTestPosition())
-    if route.checkIfAcquired(getTestPosition())
-      progress.draw(route.points, route.alreadyAcquired)
+  getPosition (pos)->
+    if route
+      route.draw(pos)
+      if route.checkIfAcquired(pos)
+        progress.draw(route.points, route.alreadyAcquired)
+    if trackme
+      route.pan(lastposition);
+
+
+
+trackBtClicked = ()->
+  bt = $("#track-bt")
+  c = "ui-btn-active";
+  if bt.hasClass c
+    bt.removeClass c
+    trackme = false
+  else
+    bt.addClass c
+    trackme = true
+    drawAll()
+
+
+handleLogin = ()->
+  $("body").pagecontainer("change", "#login", {role: "dialog"})
+  $("#submit").on "click", ()->
+    console.log("LOL")

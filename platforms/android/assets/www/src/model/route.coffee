@@ -17,14 +17,17 @@ class Route
       true
     else false
 
+  pan : (position) ->
+    @map.raw_map.setZoom(17);
+    @map.raw_map.panTo(position);
+
   acquire: () ->
     if (@points.length == @alreadyAcquired)
       "done!"
     else @alreadyAcquired++
 
   draw: (position) ->
-    @map.raw_map.setZoom(15);
-    @map.raw_map.panTo(position);
+
     if @points.length == 0 then return
     @directionsDisplay.setDirections({routes: []});
     # console.log(max)

@@ -3,7 +3,17 @@ body, html {
   background-color: #fafafa;
   font: 100% Helvetica, sans-serif; }
 
-.page-map, .ui-content {
+.page-map {
+  width: 100%;
+  height: 93%;
+  padding: 0; }
+
+.page-map {
+  width: 100%;
+  height: 93%;
+  padding: 0; }
+
+#cont {
   width: 100%;
   height: 93%;
   padding: 0; }
@@ -35,4 +45,5 @@ body, html {
   border: solid 1px darkgray; }
 
 #menu-bt {
-  height: 10px; }
+  height: 15px;
+  margin: 0 auto; }

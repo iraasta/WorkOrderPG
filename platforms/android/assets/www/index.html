@@ -2,6 +2,7 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+
     <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.css">
     <script src="http://code.jquery.com/jquery-1.11.1.min.js"></script>
     <script src="http://code.jquery.com/mobile/1.4.4/jquery.mobile-1.4.4.min.js"></script>
@@ -34,10 +35,42 @@
     </div>
     <div data-role="header">
         <a id="menu-bt" class="ui-btn ui-icon-bars ui-btn-icon-left"></a>
-        <h1>Light Dispatch - Workorder</h1></div>
-    <div data-role="content">
+        <a id="track-bt" class="ui-btn arrow-d ui-btn-icon-left">Track me</a>
+        <h1>Light Dispatch - Workorder</h1>
+    </div>
+    <div data-role="content" id="cont">
         <div id="map-canvas"></div>
     </div>
+
+</div>
+<div data-role="page" id="login">
+    <!-- start header -->
+    <div data-role="header">
+        <h1>Login</h1>
+        <a href="/" class="ui-btn-right">Cancel</a>
+    </div>
+    <!-- end header -->
+    <!-- start content -->
+    <div data-role="content" data-inset="true">
+
+        <form id="login-form">
+            <fieldset>
+
+                <label for="email">Email:</label>
+                <input type="email" name="email" id="email" value=""  />
+
+                <label for="password">Password:</label>
+                <input type="password" name="password" id="password" value="" />
+
+                <input id="submit" type="submit" value="Login" data-role="button" data-inline="true" data-theme="b" />
+
+                <hr />
+                Don't have a login? <a href="register.aspx">Sign Up</a>
+            </fieldset>
+        </form>
+
+    </div>
+    <!-- end content -->
 </div>
 </body>
 </html>

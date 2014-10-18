@@ -35,8 +35,9 @@
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/index.html \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/cordova_plugins.js \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/js \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/html \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/test \
-/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/test.html \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/lib \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/css \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/cordova.js \
@@ -164,7 +165,6 @@
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/progressPanel.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/route.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/config.coffee \
-/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/test.ls \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/events.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/logger.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/src/model/map.coffee \
@@ -181,6 +181,12 @@
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/img/logo.png \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/js/bundle.js \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/js/index.js \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins/org.apache.cordova.dialogs \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins/org.apache.cordova.dialogs/www \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins/org.apache.cordova.dialogs/www/notification.js \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins/org.apache.cordova.dialogs/www/android \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/plugins/org.apache.cordova.dialogs/www/android/notification.js \
+/home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/html/login.html \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/test/main_spec.coffee \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/lib/fastclick.js \
 /home/iraasta/Dropbox/NODE/NodeJS/Projects/WorkOrderPG/platforms/android/assets/www/lib/socket.io.min.js \
