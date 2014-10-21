@@ -11,27 +11,19 @@
     <script src="lib/socket.io.min.js"></script>
     <script src="js/bundle.js"></script>
     <link rel="stylesheet" type="text/css" href="css/index.css"/>
-    <script>
-        google.maps.event.addDomListener(window, 'load', onDeviceReady);
-        function onDeviceReady() {
-            console.log("READY")
-            // set your swipe threshold explicitly
-            $.event.special.swipe.horizontalDistanceThreshold = 12;
-            $("#main-page").on("swiperight", function() {
-                $("#directions-panel").panel("open")
-            });
-            $(document).on('click', '#menu-bt', function () {
-                $.mobile.activePage.find('#directions-panel').panel("open");
-
-            });
-        }
-    </script>
 </head>
 <body>
 
 <div data-role="page" class="page-map" id="main-page">
     <div data-role="panel" id="directions-panel" data-position="left" data-display="overlay">
-
+        <ul data-role="listview">
+            <li><a id="panel-menu-bt" class="ui-btn ui-icon-carat-l  ui-btn-icon-left">Light Dispatch</a>
+            </li>
+            <li><a class="page-tab" id="dispatch">Dispatch</a></li>
+            <li><a class="page-tab" id="workorder">Work Order</a></li>
+            <li><a class="page-tab" id="profile">Profile</a></li>
+            <li><a class="page-tab" id="chat">Chat</a></li>
+        </ul>
     </div>
     <div data-role="header">
         <a id="menu-bt" class="ui-btn ui-icon-bars ui-btn-icon-left"></a>
@@ -39,7 +31,7 @@
         <h1>Light Dispatch - Workorder</h1>
     </div>
     <div data-role="content" id="cont">
-        <div id="map-canvas"></div>
+
     </div>
 
 </div>
@@ -47,27 +39,27 @@
     <!-- start header -->
     <div data-role="header">
         <h1>Login</h1>
-        <a href="/" class="ui-btn-right">Cancel</a>
+        <a href="index.html" class="ui-btn-right">Cancel</a>
     </div>
     <!-- end header -->
     <!-- start content -->
     <div data-role="content" data-inset="true">
 
-        <form id="login-form">
+
             <fieldset>
 
                 <label for="email">Email:</label>
-                <input type="email" name="email" id="email" value=""  />
+                <input type="email"  id="email" value=""  />
 
                 <label for="password">Password:</label>
-                <input type="password" name="password" id="password" value="" />
+                <input type="password" id="password" value="" />
 
                 <input id="submit" type="submit" value="Login" data-role="button" data-inline="true" data-theme="b" />
-
+                <div id="login-failed">Login failed</div>
                 <hr />
                 Don't have a login? <a href="register.aspx">Sign Up</a>
             </fieldset>
-        </form>
+
 
     </div>
     <!-- end content -->

@@ -57,14 +57,15 @@ module.exports = (grunt)->
 
   grunt.task.registerTask "browserify", "Bundle all js files", ->
     done = this.async();
-    exec("browserify -t coffeeify www/src/index.coffee > www/js/bundle.js", (err, stderr, stdout) ->
+    exec("browserify -t coffeeify www/src/index.coffee > www/js/bundle.js", (err, stdout, stderr) ->
       grunt.log.write "stderr:: #{stderr}" if stderr?
       grunt.log.write "stdout:: #{stdout}" if stdout?
+      if stderr.length then throw new grunt.util.error(stderr)
       done();
     )
   grunt.task.registerTask "run", "Run on device", (target)->
     done = this.async();
-    exec("cordova run #{target}", (err, stderr, stdout) ->
+    exec("cordova run #{target}", (err, stdout, stderr) ->
       grunt.log.write "stderr:: #{stderr}"
       grunt.log.write "stdout:: #{stdout}"
       done();
@@ -72,7 +73,8 @@ module.exports = (grunt)->
   grunt.task.registerTask "test", "Test with mocha", (target)->
     done = this.async();
     exec("npm test", (err, stderr, stdout) ->
-      grunt.log.write "stderr:: #{stderr}"
-      grunt.log.write "stdout:: #{stdout}"
+      grunt.log.write "stderr:: #{stderr}" if stderr.length
+      if stderr.length then throw new grunt.util.error(stderr)
+      grunt.log.write "stdout:: #{stdout}" if stdout.length
       done();
     )

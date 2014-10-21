@@ -4,7 +4,7 @@ class MapAdapter
       zoom: 12,
       center: new google.maps.LatLng(0, 0)
     };
-    @raw_map = new google.maps.Map(document.getElementById(domId), mapOptions);
+    @raw_map = new google.maps.Map($(domId).get(0), mapOptions);
     @markers = []
 
   addMarker: (lat,lng, color = "yellow")->

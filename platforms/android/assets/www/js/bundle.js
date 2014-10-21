@@ -1416,13 +1416,146 @@
 }.call(this));
 
 },{}],2:[function(require,module,exports){
-var DEBUG, GPS, LatLng, MapAdapter, ProgressPanel, Route, drawAll, events, getPosition, gps, handleLogin, initSocket, initialize, lastposition, map, progress, route, sock, trackBtClicked, trackme, yourPos;
+var GPS, addPanelMenu, addPanelTabRouting, events, globals, handleLogin, initSocket, initialize, loadPage, pages, removeScrolling, setGPSPositionUpdate, trackBtClicked, yourPos,
+  __slice = [].slice;
 
 yourPos = null;
 
-DEBUG = false;
+globals = require("../model/globals.coffee");
 
-require("../model/logger.coffee");
+events = require("../model/events.coffee");
+
+GPS = require("../model/gps.coffee").GPS;
+
+pages = {
+  "workorder.html": require("../controller/workorder.coffee"),
+  "dispatch.html": {
+    init: function() {}
+  },
+  "profile.html": {
+    init: function() {}
+  },
+  "chat.html": {
+    init: function() {}
+  }
+};
+
+initialize = function() {
+  globals.gps = new GPS();
+  initSocket();
+  addPanelMenu();
+  addPanelTabRouting();
+  setGPSPositionUpdate();
+  removeScrolling();
+  return loadPage(globals.defaultPage, function() {
+    return $("#track-bt").on("click", trackBtClicked);
+  });
+};
+
+$(document).on('ready', initialize);
+
+trackBtClicked = function() {
+  var bt, c;
+  bt = $("#track-bt");
+  c = "ui-btn-active";
+  if (bt.hasClass(c)) {
+    bt.removeClass(c);
+    return globals.setTrackme(false);
+  } else {
+    bt.addClass(c);
+    return globals.setTrackme(true);
+  }
+};
+
+initSocket = function() {
+  var remote;
+  remote = 'http://104.131.55.190:9001/';
+  globals.sock = io.connect(remote);
+  globals.sock.on("connect", function() {
+    return console.log("connected");
+  });
+  globals.sock.on(events.success, function() {
+    var h, t, _ref;
+    _ref = globals.nextResult, h = _ref[0], t = 2 <= _ref.length ? __slice.call(_ref, 1) : [];
+    if (h != null) {
+      h(true);
+    }
+    return globals.nextResult = t;
+  });
+  return globals.sock.on(events.failure, function() {
+    var h, t, _ref;
+    _ref = globals.nextResult, h = _ref[0], t = 2 <= _ref.length ? __slice.call(_ref, 1) : [];
+    if (h != null) {
+      h(false);
+    }
+    return globals.nextResult = t;
+  });
+};
+
+handleLogin = function() {
+  $("body").pagecontainer("change", "#login", {
+    role: "dialog"
+  });
+  return $("#submit").on("click", function() {
+    globals.sock.emit(events.logindriver, [$("#email").val(), $("#password").val()]);
+    return globals.nextResult.push(function(success) {
+      if (success) {
+        return $("body").pagecontainer("change", "");
+      } else {
+        return $("#login-failed").show();
+      }
+    });
+  });
+};
+
+removeScrolling = function() {
+  return document.addEventListener('touchmove', (function(e) {
+    return e.preventDefault();
+  }), false);
+};
+
+addPanelMenu = function() {
+  $.event.special.swipe.horizontalDistanceThreshold = 12;
+  $("#main-page").on("swiperight", function() {
+    return $("#directions-panel").panel("open");
+  });
+  $(document).on('click', '#menu-bt', function() {
+    return $.mobile.activePage.find('#directions-panel').panel("open");
+  });
+  return $(document).on('click', '#panel-menu-bt', function() {
+    return $.mobile.activePage.find('#directions-panel').panel("close");
+  });
+};
+
+setGPSPositionUpdate = function() {
+  globals.gps.every(60000, (function(_this) {
+    return function(a, b) {
+      return globals.sock.emit(events.position, [b.coords.latitude, b.coords.longitude]);
+    };
+  })(this));
+  return 0;
+};
+
+addPanelTabRouting = function() {
+  return $(".page-tab").bind("click", function(e) {
+    console.log("Click");
+    return loadPage(e.target.id);
+  });
+};
+
+loadPage = function(page, cb) {
+  return $("#cont").load("html/" + page + ".html", function() {
+    pages[page + ".html"].init();
+    if (cb) {
+      return cb();
+    }
+  });
+};
+
+
+
+},{"../controller/workorder.coffee":3,"../model/events.coffee":5,"../model/globals.coffee":6,"../model/gps.coffee":7}],3:[function(require,module,exports){
+var DEBUG, GPS, LatLng, MapAdapter, ProgressPanel, Route, addDrawTimer, addGoogleMapPageFix, drawAll, events, getPosition, globals, map, route, setRemoveTrackingOnDrag;
 
 events = require("../model/events.coffee");
 
@@ -1434,66 +1567,53 @@ GPS = require("./../model/gps.coffee").GPS;
 
 ProgressPanel = require("./../model/progressPanel.coffee").ProgressPanel;
 
+globals = require("../model/globals.coffee");
+
+DEBUG = globals.DEBUG;
+
 LatLng = google.maps.LatLng;
 
-route = progress = map = gps = sock = null;
+map = null;
 
-trackme = lastposition = null;
+route = null;
 
-initSocket = function() {
-  var local, remote;
-  local = "127.0.0.1:9000";
-  remote = 'http://104.131.55.190:9001/';
-  sock = io.connect(remote);
-  sock.on("connect", function() {
-    console.log("connected");
-    sock.emit(events.logindriver, ["test@test.com", "w1"]);
-    return gps.every(5000, function(e, p) {
-      return drawAll();
-    });
-  });
-  sock.on(events.success, function(success) {
-    if (success) {
-      return console.log("success");
+exports.init = function() {
+  var progress;
+  console.log("init");
+  map = new MapAdapter("#map-canvas");
+  route = new Route([], 0, map);
+  progress = new ProgressPanel($("#testbt"));
+  setRemoveTrackingOnDrag();
+  addGoogleMapPageFix();
+  addDrawTimer();
+  globals.onTrackme(function(bool) {
+    if (bool) {
+      return route.pan(globals.lastposition);
     }
   });
-  sock.on(events.failure, function(success) {
-    if (success) {
-      return console.log("falure");
-    }
-  });
-  return sock.on(events.workorder, function(data) {
+  globals.sock.on(events.workorder, function(data) {
     var alreadyAcquired, objectives;
-    console.log(data);
     objectives = data[0], alreadyAcquired = data[1];
-    console.log([objectives, alreadyAcquired]);
     route.points = objectives;
     return drawAll();
   });
-};
-
-initialize = function() {
-  gps = new GPS();
-  map = new MapAdapter("map-canvas");
-  route = new Route([], 0, map);
-  progress = new ProgressPanel($("#testbt"));
-  initSocket();
-  gps.every(60000, (function(_this) {
-    return function(a, b) {
-      return sock.emit(events.position, [b.coords.latitude, b.coords.longitude]);
-    };
-  })(this));
-  google.maps.event.addListener(map, 'drag', function() {
-    return trackBtClicked();
-  });
-  $("#track-bt").on("click", trackBtClicked);
-  getPosition(function(latlng) {
+  return getPosition(function(latlng) {
     return route.pan(latlng);
   });
-  return setTimeout(handleLogin, 2000);
 };
 
-google.maps.event.addDomListener(window, 'load', initialize);
+drawAll = function() {
+  getPosition(function(pos) {});
+  if (route != null) {
+    route.draw(pos);
+    if (route.checkIfAcquired(pos)) {
+      progress.draw(route.points, route.alreadyAcquired);
+    }
+    if (globals.trackme) {
+      return route.pan(globals.lastposition);
+    }
+  }
+};
 
 getPosition = function(cb) {
   var objectives, posx, posy;
@@ -1501,61 +1621,49 @@ getPosition = function(cb) {
     posx = 41.850033;
     posy = -73.93;
     objectives = [];
-    lastposition = new LatLng(posx, posy);
+    globals.lastposition = new LatLng(posx, posy);
     return cb(new LatLng(posx, posy));
   } else {
-    return gps.getLatLng(function(latlng) {
-      lastposition = latlng;
+    return globals.gps.getLatLng(function(latlng) {
+      globals.lastposition = latlng;
       return cb(latlng);
     });
   }
 };
 
-drawAll = function() {
-  return getPosition(function(pos) {
-    if (route) {
-      route.draw(pos);
-      if (route.checkIfAcquired(pos)) {
-        progress.draw(route.points, route.alreadyAcquired);
-      }
-    }
-    if (trackme) {
-      return route.pan(lastposition);
+setRemoveTrackingOnDrag = function() {
+  return google.maps.event.addListener(map.raw_map, 'drag', function() {
+    if (globals.trackme) {
+      $("#track-bt").click();
+      return globals.trackme = false;
     }
   });
 };
 
-trackBtClicked = function() {
-  var bt, c;
-  bt = $("#track-bt");
-  c = "ui-btn-active";
-  if (bt.hasClass(c)) {
-    bt.removeClass(c);
-    return trackme = false;
-  } else {
-    bt.addClass(c);
-    trackme = true;
+addGoogleMapPageFix = function() {
+  return $(window).hashchange(function() {
+    var cb;
+    cb = function() {
+      return google.maps.event.trigger(map.raw_map, 'resize');
+    };
+    return setTimeout(cb, 1000);
+  });
+};
+
+addDrawTimer = function() {
+  return globals.gps.every(5000, function(e, p) {
     return drawAll();
-  }
-};
-
-handleLogin = function() {
-  $("body").pagecontainer("change", "#login", {
-    role: "dialog"
-  });
-  return $("#submit").on("click", function() {
-    return console.log("LOL");
   });
 };
 
 
 
-},{"../model/events.coffee":4,"../model/logger.coffee":6,"./../model/gps.coffee":5,"./../model/map.coffee":7,"./../model/progressPanel.coffee":8,"./../model/route.coffee":9}],3:[function(require,module,exports){
+},{"../model/events.coffee":5,"../model/globals.coffee":6,"./../model/gps.coffee":7,"./../model/map.coffee":8,"./../model/progressPanel.coffee":9,"./../model/route.coffee":10}],4:[function(require,module,exports){
 require("./controller/index.coffee");
 
 
 
-},{"./controller/index.coffee":2}],4:[function(require,module,exports){
+},{"./controller/index.coffee":2}],5:[function(require,module,exports){
 module.exports = {
   workorder: "workorder",
   logindriver: "logindriver",
@@ -1569,14 +1677,51 @@ module.exports = {
 
 
 
-},{}],5:[function(require,module,exports){
-var GPS;
+},{}],6:[function(require,module,exports){
+var trackmeCbs;
+
+module.exports = {
+  nextResult: [],
+  sock: null,
+  gps: null,
+  trackme: false,
+  defaultPage: "workorder",
+  DEBUG: false,
+  lastposition: null
+};
+
+trackmeCbs = [];
+
+module.exports.setTrackme = function(bool) {
+  var a, _i, _len;
+  for (_i = 0, _len = trackmeCbs.length; _i < _len; _i++) {
+    a = trackmeCbs[_i];
+    a(bool);
+  }
+  return module.exports.trackme = bool;
+};
+
+module.exports.onTrackme = function(cb) {
+  return trackmeCbs.push(cb);
+};
+
+console.log("ASDASD");
+
+window.globals = module.exports;
+
+
+
+},{}],7:[function(require,module,exports){
+var GPS, globals;
+
+globals = require("./../model/globals.coffee");
 
 GPS = (function() {
   function GPS() {}
 
   GPS.prototype.getPosition = function(cb) {
     return navigator.geolocation.getCurrentPosition(function(position) {
+      globals.lastposition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
       return cb(null, position);
     }, function(error) {
       return cb(error, null);
@@ -1605,61 +1750,7 @@ module.exports.GPS = GPS;
 
 
 
-},{}],6:[function(require,module,exports){
-var Logger, util;
-
-util = require("util");
-
-Logger = (function() {
-  function Logger(appendFun, clearFun) {
-    this.appendFun = appendFun;
-    this.clearFun = clearFun;
-    this.messages = {};
-    this.actualTag = null;
-  }
-
-  Logger.prototype.log = function(obj, tag) {
-    if ((this.actualTag != null) || tag === this.actualTag) {
-      this.appendFun(util.format(obj));
-    }
-    if (this.messages[tag] == null) {
-      return this.messages[tag] = [obj];
-    } else {
-      return this.messages[tag].push(obj);
-    }
-  };
-
-  Logger.prototype.trace = function(obj, tag) {
-    this.log(obj, tag);
-    return this.log((new Error).stack, tag);
-  };
-
-  Logger.prototype.showOnlyTag = function(tag) {
-    var obj, _ref;
-    this.clearFun();
-    _ref = this.messages;
-    for (tag in _ref) {
-      obj = _ref[tag];
-      if (tag === tag) {
-        this.appendFun(obj);
-      }
-    }
-    return this.actualTag = tag;
-  };
-
-  Logger.prototype.showAllTags = function() {
-    return this.actualTag = null;
-  };
-
-  return Logger;
-
-})();
-
-module.exports = Logger;
-
-
-
-},{"util":13}],7:[function(require,module,exports){
+},{"./../model/globals.coffee":6}],8:[function(require,module,exports){
 var MapAdapter;
 
 MapAdapter = (function() {
@@ -1669,7 +1760,7 @@ MapAdapter = (function() {
       zoom: 12,
       center: new google.maps.LatLng(0, 0)
     };
-    this.raw_map = new google.maps.Map(document.getElementById(domId), mapOptions);
+    this.raw_map = new google.maps.Map($(domId).get(0), mapOptions);
     this.markers = [];
   }
 
@@ -1696,7 +1787,7 @@ module.exports.MapAdapter = MapAdapter;
 
 
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 var ProgressPanel;
 
 ProgressPanel = (function() {
@@ -1727,7 +1818,7 @@ module.exports.ProgressPanel = ProgressPanel;
 
 
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 var LatLng, Route, getDistance, rad, _;
 
 _ = require("underscore");
@@ -1826,691 +1917,4 @@ getDistance = function(p1, p2) {
 
 
 
-},{"underscore":1}],10:[function(require,module,exports){
-if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    ctor.prototype = Object.create(superCtor.prototype, {
-      constructor: {
-        value: ctor,
-        enumerable: false,
-        writable: true,
-        configurable: true
-      }
-    });
-  };
-} else {
-  // old school shim for old browsers
-  module.exports = function inherits(ctor, superCtor) {
-    ctor.super_ = superCtor
-    var TempCtor = function () {}
-    TempCtor.prototype = superCtor.prototype
-    ctor.prototype = new TempCtor()
-    ctor.prototype.constructor = ctor
-  }
-}
-
-},{}],11:[function(require,module,exports){
-// shim for using process in browser
-
-var process = module.exports = {};
-
-process.nextTick = (function () {
-    var canSetImmediate = typeof window !== 'undefined'
-    && window.setImmediate;
-    var canPost = typeof window !== 'undefined'
-    && window.postMessage && window.addEventListener
-    ;
-
-    if (canSetImmediate) {
-        return function (f) { return window.setImmediate(f) };
-    }
-
-    if (canPost) {
-        var queue = [];
-        window.addEventListener('message', function (ev) {
-            var source = ev.source;
-            if ((source === window || source === null) && ev.data === 'process-tick') {
-                ev.stopPropagation();
-                if (queue.length > 0) {
-                    var fn = queue.shift();
-                    fn();
-                }
-            }
-        }, true);
-
-        return function nextTick(fn) {
-            queue.push(fn);
-            window.postMessage('process-tick', '*');
-        };
-    }
-
-    return function nextTick(fn) {
-        setTimeout(fn, 0);
-    };
-})();
-
-process.title = 'browser';
-process.browser = true;
-process.env = {};
-process.argv = [];
-
-function noop() {}
-
-process.on = noop;
-process.addListener = noop;
-process.once = noop;
-process.off = noop;
-process.removeListener = noop;
-process.removeAllListeners = noop;
-process.emit = noop;
-
-process.binding = function (name) {
-    throw new Error('process.binding is not supported');
-}
-
-// TODO(shtylman)
-process.cwd = function () { return '/' };
-process.chdir = function (dir) {
-    throw new Error('process.chdir is not supported');
-};
-
-},{}],12:[function(require,module,exports){
-module.exports = function isBuffer(arg) {
-  return arg && typeof arg === 'object'
-    && typeof arg.copy === 'function'
-    && typeof arg.fill === 'function'
-    && typeof arg.readUInt8 === 'function';
-}
-},{}],13:[function(require,module,exports){
-(function (process,global){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
-// NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-var formatRegExp = /%[sdj%]/g;
-exports.format = function(f) {
-  if (!isString(f)) {
-    var objects = [];
-    for (var i = 0; i < arguments.length; i++) {
-      objects.push(inspect(arguments[i]));
-    }
-    return objects.join(' ');
-  }
-
-  var i = 1;
-  var args = arguments;
-  var len = args.length;
-  var str = String(f).replace(formatRegExp, function(x) {
-    if (x === '%%') return '%';
-    if (i >= len) return x;
-    switch (x) {
-      case '%s': return String(args[i++]);
-      case '%d': return Number(args[i++]);
-      case '%j':
-        try {
-          return JSON.stringify(args[i++]);
-        } catch (_) {
-          return '[Circular]';
-        }
-      default:
-        return x;
-    }
-  });
-  for (var x = args[i]; i < len; x = args[++i]) {
-    if (isNull(x) || !isObject(x)) {
-      str += ' ' + x;
-    } else {
-      str += ' ' + inspect(x);
-    }
-  }
-  return str;
-};
-
-
-// Mark that a method should not be used.
-// Returns a modified function which warns once by default.
-// If --no-deprecation is set, then it is a no-op.
-exports.deprecate = function(fn, msg) {
-  // Allow for deprecating things in the process of starting up.
-  if (isUndefined(global.process)) {
-    return function() {
-      return exports.deprecate(fn, msg).apply(this, arguments);
-    };
-  }
-
-  if (process.noDeprecation === true) {
-    return fn;
-  }
-
-  var warned = false;
-  function deprecated() {
-    if (!warned) {
-      if (process.throwDeprecation) {
-        throw new Error(msg);
-      } else if (process.traceDeprecation) {
-        console.trace(msg);
-      } else {
-        console.error(msg);
-      }
-      warned = true;
-    }
-    return fn.apply(this, arguments);
-  }
-
-  return deprecated;
-};
-
-
-var debugs = {};
-var debugEnviron;
-exports.debuglog = function(set) {
-  if (isUndefined(debugEnviron))
-    debugEnviron = process.env.NODE_DEBUG || '';
-  set = set.toUpperCase();
-  if (!debugs[set]) {
-    if (new RegExp('\\b' + set + '\\b', 'i').test(debugEnviron)) {
-      var pid = process.pid;
-      debugs[set] = function() {
-        var msg = exports.format.apply(exports, arguments);
-        console.error('%s %d: %s', set, pid, msg);
-      };
-    } else {
-      debugs[set] = function() {};
-    }
-  }
-  return debugs[set];
-};
-
-
-/**
- * Echos the value of a value. Trys to print the value out
- * in the best way possible given the different types.
- *
- * @param {Object} obj The object to print out.
- * @param {Object} opts Optional options object that alters the output.
- */
-/* legacy: obj, showHidden, depth, colors*/
-function inspect(obj, opts) {
-  // default options
-  var ctx = {
-    seen: [],
-    stylize: stylizeNoColor
-  };
-  // legacy...
-  if (arguments.length >= 3) ctx.depth = arguments[2];
-  if (arguments.length >= 4) ctx.colors = arguments[3];
-  if (isBoolean(opts)) {
-    // legacy...
-    ctx.showHidden = opts;
-  } else if (opts) {
-    // got an "options" object
-    exports._extend(ctx, opts);
-  }
-  // set default options
-  if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
-  if (isUndefined(ctx.depth)) ctx.depth = 2;
-  if (isUndefined(ctx.colors)) ctx.colors = false;
-  if (isUndefined(ctx.customInspect)) ctx.customInspect = true;
-  if (ctx.colors) ctx.stylize = stylizeWithColor;
-  return formatValue(ctx, obj, ctx.depth);
-}
-exports.inspect = inspect;
-
-
-// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
-inspect.colors = {
-  'bold' : [1, 22],
-  'italic' : [3, 23],
-  'underline' : [4, 24],
-  'inverse' : [7, 27],
-  'white' : [37, 39],
-  'grey' : [90, 39],
-  'black' : [30, 39],
-  'blue' : [34, 39],
-  'cyan' : [36, 39],
-  'green' : [32, 39],
-  'magenta' : [35, 39],
-  'red' : [31, 39],
-  'yellow' : [33, 39]
-};
-
-// Don't use 'blue' not visible on cmd.exe
-inspect.styles = {
-  'special': 'cyan',
-  'number': 'yellow',
-  'boolean': 'yellow',
-  'undefined': 'grey',
-  'null': 'bold',
-  'string': 'green',
-  'date': 'magenta',
-  // "name": intentionally not styling
-  'regexp': 'red'
-};
-
-
-function stylizeWithColor(str, styleType) {
-  var style = inspect.styles[styleType];
-
-  if (style) {
-    return '\u001b[' + inspect.colors[style][0] + 'm' + str +
-           '\u001b[' + inspect.colors[style][1] + 'm';
-  } else {
-    return str;
-  }
-}
-
-
-function stylizeNoColor(str, styleType) {
-  return str;
-}
-
-
-function arrayToHash(array) {
-  var hash = {};
-
-  array.forEach(function(val, idx) {
-    hash[val] = true;
-  });
-
-  return hash;
-}
-
-
-function formatValue(ctx, value, recurseTimes) {
-  // Provide a hook for user-specified inspect functions.
-  // Check that value is an object with an inspect function on it
-  if (ctx.customInspect &&
-      value &&
-      isFunction(value.inspect) &&
-      // Filter out the util module, it's inspect function is special
-      value.inspect !== exports.inspect &&
-      // Also filter out any prototype objects using the circular check.
-      !(value.constructor && value.constructor.prototype === value)) {
-    var ret = value.inspect(recurseTimes, ctx);
-    if (!isString(ret)) {
-      ret = formatValue(ctx, ret, recurseTimes);
-    }
-    return ret;
-  }
-
-  // Primitive types cannot have properties
-  var primitive = formatPrimitive(ctx, value);
-  if (primitive) {
-    return primitive;
-  }
-
-  // Look up the keys of the object.
-  var keys = Object.keys(value);
-  var visibleKeys = arrayToHash(keys);
-
-  if (ctx.showHidden) {
-    keys = Object.getOwnPropertyNames(value);
-  }
-
-  // IE doesn't make error fields non-enumerable
-  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
-  if (isError(value)
-      && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
-    return formatError(value);
-  }
-
-  // Some type of object without properties can be shortcutted.
-  if (keys.length === 0) {
-    if (isFunction(value)) {
-      var name = value.name ? ': ' + value.name : '';
-      return ctx.stylize('[Function' + name + ']', 'special');
-    }
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    }
-    if (isDate(value)) {
-      return ctx.stylize(Date.prototype.toString.call(value), 'date');
-    }
-    if (isError(value)) {
-      return formatError(value);
-    }
-  }
-
-  var base = '', array = false, braces = ['{', '}'];
-
-  // Make Array say that they are Array
-  if (isArray(value)) {
-    array = true;
-    braces = ['[', ']'];
-  }
-
-  // Make functions say that they are functions
-  if (isFunction(value)) {
-    var n = value.name ? ': ' + value.name : '';
-    base = ' [Function' + n + ']';
-  }
-
-  // Make RegExps say that they are RegExps
-  if (isRegExp(value)) {
-    base = ' ' + RegExp.prototype.toString.call(value);
-  }
-
-  // Make dates with properties first say the date
-  if (isDate(value)) {
-    base = ' ' + Date.prototype.toUTCString.call(value);
-  }
-
-  // Make error with message first say the error
-  if (isError(value)) {
-    base = ' ' + formatError(value);
-  }
-
-  if (keys.length === 0 && (!array || value.length == 0)) {
-    return braces[0] + base + braces[1];
-  }
-
-  if (recurseTimes < 0) {
-    if (isRegExp(value)) {
-      return ctx.stylize(RegExp.prototype.toString.call(value), 'regexp');
-    } else {
-      return ctx.stylize('[Object]', 'special');
-    }
-  }
-
-  ctx.seen.push(value);
-
-  var output;
-  if (array) {
-    output = formatArray(ctx, value, recurseTimes, visibleKeys, keys);
-  } else {
-    output = keys.map(function(key) {
-      return formatProperty(ctx, value, recurseTimes, visibleKeys, key, array);
-    });
-  }
-
-  ctx.seen.pop();
-
-  return reduceToSingleString(output, base, braces);
-}
-
-
-function formatPrimitive(ctx, value) {
-  if (isUndefined(value))
-    return ctx.stylize('undefined', 'undefined');
-  if (isString(value)) {
-    var simple = '\'' + JSON.stringify(value).replace(/^"|"$/g, '')
-                                             .replace(/'/g, "\\'")
-                                             .replace(/\\"/g, '"') + '\'';
-    return ctx.stylize(simple, 'string');
-  }
-  if (isNumber(value))
-    return ctx.stylize('' + value, 'number');
-  if (isBoolean(value))
-    return ctx.stylize('' + value, 'boolean');
-  // For some reason typeof null is "object", so special case here.
-  if (isNull(value))
-    return ctx.stylize('null', 'null');
-}
-
-
-function formatError(value) {
-  return '[' + Error.prototype.toString.call(value) + ']';
-}
-
-
-function formatArray(ctx, value, recurseTimes, visibleKeys, keys) {
-  var output = [];
-  for (var i = 0, l = value.length; i < l; ++i) {
-    if (hasOwnProperty(value, String(i))) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          String(i), true));
-    } else {
-      output.push('');
-    }
-  }
-  keys.forEach(function(key) {
-    if (!key.match(/^\d+$/)) {
-      output.push(formatProperty(ctx, value, recurseTimes, visibleKeys,
-          key, true));
-    }
-  });
-  return output;
-}
-
-
-function formatProperty(ctx, value, recurseTimes, visibleKeys, key, array) {
-  var name, str, desc;
-  desc = Object.getOwnPropertyDescriptor(value, key) || { value: value[key] };
-  if (desc.get) {
-    if (desc.set) {
-      str = ctx.stylize('[Getter/Setter]', 'special');
-    } else {
-      str = ctx.stylize('[Getter]', 'special');
-    }
-  } else {
-    if (desc.set) {
-      str = ctx.stylize('[Setter]', 'special');
-    }
-  }
-  if (!hasOwnProperty(visibleKeys, key)) {
-    name = '[' + key + ']';
-  }
-  if (!str) {
-    if (ctx.seen.indexOf(desc.value) < 0) {
-      if (isNull(recurseTimes)) {
-        str = formatValue(ctx, desc.value, null);
-      } else {
-        str = formatValue(ctx, desc.value, recurseTimes - 1);
-      }
-      if (str.indexOf('\n') > -1) {
-        if (array) {
-          str = str.split('\n').map(function(line) {
-            return '  ' + line;
-          }).join('\n').substr(2);
-        } else {
-          str = '\n' + str.split('\n').map(function(line) {
-            return '   ' + line;
-          }).join('\n');
-        }
-      }
-    } else {
-      str = ctx.stylize('[Circular]', 'special');
-    }
-  }
-  if (isUndefined(name)) {
-    if (array && key.match(/^\d+$/)) {
-      return str;
-    }
-    name = JSON.stringify('' + key);
-    if (name.match(/^"([a-zA-Z_][a-zA-Z_0-9]*)"$/)) {
-      name = name.substr(1, name.length - 2);
-      name = ctx.stylize(name, 'name');
-    } else {
-      name = name.replace(/'/g, "\\'")
-                 .replace(/\\"/g, '"')
-                 .replace(/(^"|"$)/g, "'");
-      name = ctx.stylize(name, 'string');
-    }
-  }
-
-  return name + ': ' + str;
-}
-
-
-function reduceToSingleString(output, base, braces) {
-  var numLinesEst = 0;
-  var length = output.reduce(function(prev, cur) {
-    numLinesEst++;
-    if (cur.indexOf('\n') >= 0) numLinesEst++;
-    return prev + cur.replace(/\u001b\[\d\d?m/g, '').length + 1;
-  }, 0);
-
-  if (length > 60) {
-    return braces[0] +
-           (base === '' ? '' : base + '\n ') +
-           ' ' +
-           output.join(',\n  ') +
-           ' ' +
-           braces[1];
-  }
-
-  return braces[0] + base + ' ' + output.join(', ') + ' ' + braces[1];
-}
-
-
-// NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
-function isArray(ar) {
-  return Array.isArray(ar);
-}
-exports.isArray = isArray;
-
-function isBoolean(arg) {
-  return typeof arg === 'boolean';
-}
-exports.isBoolean = isBoolean;
-
-function isNull(arg) {
-  return arg === null;
-}
-exports.isNull = isNull;
-
-function isNullOrUndefined(arg) {
-  return arg == null;
-}
-exports.isNullOrUndefined = isNullOrUndefined;
-
-function isNumber(arg) {
-  return typeof arg === 'number';
-}
-exports.isNumber = isNumber;
-
-function isString(arg) {
-  return typeof arg === 'string';
-}
-exports.isString = isString;
-
-function isSymbol(arg) {
-  return typeof arg === 'symbol';
-}
-exports.isSymbol = isSymbol;
-
-function isUndefined(arg) {
-  return arg === void 0;
-}
-exports.isUndefined = isUndefined;
-
-function isRegExp(re) {
-  return isObject(re) && objectToString(re) === '[object RegExp]';
-}
-exports.isRegExp = isRegExp;
-
-function isObject(arg) {
-  return typeof arg === 'object' && arg !== null;
-}
-exports.isObject = isObject;
-
-function isDate(d) {
-  return isObject(d) && objectToString(d) === '[object Date]';
-}
-exports.isDate = isDate;
-
-function isError(e) {
-  return isObject(e) &&
-      (objectToString(e) === '[object Error]' || e instanceof Error);
-}
-exports.isError = isError;
-
-function isFunction(arg) {
-  return typeof arg === 'function';
-}
-exports.isFunction = isFunction;
-
-function isPrimitive(arg) {
-  return arg === null ||
-         typeof arg === 'boolean' ||
-         typeof arg === 'number' ||
-         typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
-         typeof arg === 'undefined';
-}
-exports.isPrimitive = isPrimitive;
-
-exports.isBuffer = require('./support/isBuffer');
-
-function objectToString(o) {
-  return Object.prototype.toString.call(o);
-}
-
-
-function pad(n) {
-  return n < 10 ? '0' + n.toString(10) : n.toString(10);
-}
-
-
-var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
-              'Oct', 'Nov', 'Dec'];
-
-// 26 Feb 16:19:34
-function timestamp() {
-  var d = new Date();
-  var time = [pad(d.getHours()),
-              pad(d.getMinutes()),
-              pad(d.getSeconds())].join(':');
-  return [d.getDate(), months[d.getMonth()], time].join(' ');
-}
-
-
-// log is just a thin wrapper to console.log that prepends a timestamp
-exports.log = function() {
-  console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
-};
-
-
-/**
- * Inherit the prototype methods from one constructor into another.
- *
- * The Function.prototype.inherits from lang.js rewritten as a standalone
- * function (not on Function.prototype). NOTE: If this file is to be loaded
- * during bootstrapping this function needs to be rewritten using some native
- * functions as prototype setup using normal JavaScript does not work as
- * expected during bootstrapping (see mirror.js in r114903).
- *
- * @param {function} ctor Constructor function which needs to inherit the
- *     prototype.
- * @param {function} superCtor Constructor function to inherit prototype from.
- */
-exports.inherits = require('inherits');
-
-exports._extend = function(origin, add) {
-  // Don't do anything if add isn't an object
-  if (!add || !isObject(add)) return origin;
-
-  var keys = Object.keys(add);
-  var i = keys.length;
-  while (i--) {
-    origin[keys[i]] = add[keys[i]];
-  }
-  return origin;
-};
-
-function hasOwnProperty(obj, prop) {
-  return Object.prototype.hasOwnProperty.call(obj, prop);
-}
-
-}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./support/isBuffer":12,"_process":11,"inherits":10}]},{},[3]);
+},{"underscore":1}]},{},[4]);

@@ -18,8 +18,8 @@ module.exports = [
 module.exports.metadata = 
 // TOP OF METADATA
 {
-    "org.apache.cordova.geolocation": "0.3.11-dev",
-    "org.apache.cordova.dialogs": "0.2.11-dev"
+    "org.apache.cordova.dialogs": "0.2.11-dev",
+    "org.apache.cordova.geolocation": "0.3.11-dev"
 }
 // BOTTOM OF METADATA
 });

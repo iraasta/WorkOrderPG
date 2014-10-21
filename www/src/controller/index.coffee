@@ -1,81 +1,28 @@
 yourPos = null
-DEBUG = false;
 
-require "../model/logger.coffee"
+globals = require "../model/globals.coffee"
 events = require "../model/events.coffee"
-{Route} = require "./../model/route.coffee"
-{MapAdapter}   = require "./../model/map.coffee"
-{GPS} = require "./../model/gps.coffee"
-{ProgressPanel} = require "./../model/progressPanel.coffee"
-LatLng = google.maps.LatLng;
+{GPS} = require "../model/gps.coffee"
 
-route = progress = map = gps = sock  =  null;
-trackme  = lastposition = null;
+pages =
+  "workorder.html" : require "../controller/workorder.coffee"
+  "dispatch.html" : {init:->}
+  "profile.html" : {init:->}
+  "chat.html" : {init:->}
 
-initSocket = ()->
-  local = "127.0.0.1:9000"
-  remote = 'http://104.131.55.190:9001/';
-  sock = io.connect(remote);
-  sock.on("connect", () ->
-    console.log("connected")
-    sock.emit events.logindriver, ["test@test.com", "w1"]
-
-    gps.every(5000, (e,p) ->
-      drawAll()
-
-    )
-  )
-
-  sock.on events.success, (success) ->
-    console.log("success") if success
-  sock.on events.failure, (success) ->
-    console.log("falure") if success
-  sock.on events.workorder, (data) ->
-    console.log(data);
-    [objectives, alreadyAcquired] = data
-    console.log([objectives, alreadyAcquired])
-    route.points = objectives
-    drawAll()
 
 initialize = () ->
-  gps = new GPS();
-  map = new MapAdapter("map-canvas");
-  route = new Route([], 0, map)
-  progress = new ProgressPanel($("#testbt"))
-
+  globals.gps = new GPS();
   initSocket();
-  gps.every(60000, (a,b) => sock.emit(events.position, [b.coords.latitude, b.coords.longitude]))
-  google.maps.event.addListener map, 'drag', () -> trackBtClicked()
-  $("#track-bt").on "click", trackBtClicked
-  getPosition (latlng) -> route.pan(latlng)
+  addPanelMenu();
+  addPanelTabRouting();
+  setGPSPositionUpdate();
+  removeScrolling()
+  loadPage globals.defaultPage,  ->
+    $("#track-bt").on "click", trackBtClicked
+    #setTimeout handleLogin, 2000
 
-
-  setTimeout handleLogin, 2000
-
-
-google.maps.event.addDomListener(window, 'load', initialize);
-
-getPosition =(cb)->
-  if(DEBUG)
-    posx = 41.850033
-    posy= -73.93
-    objectives = []
-    lastposition = new LatLng(posx, posy)
-    cb new LatLng(posx, posy)
-  else
-    gps.getLatLng (latlng)->
-      lastposition = latlng;
-      cb(latlng)
-
-drawAll = ()->
-  getPosition (pos)->
-    if route
-      route.draw(pos)
-      if route.checkIfAcquired(pos)
-        progress.draw(route.points, route.alreadyAcquired)
-    if trackme
-      route.pan(lastposition);
-
+$(document).on 'ready', initialize
 
 
 trackBtClicked = ()->
@@ -83,14 +30,63 @@ trackBtClicked = ()->
   c = "ui-btn-active";
   if bt.hasClass c
     bt.removeClass c
-    trackme = false
+    globals.setTrackme(false)
   else
     bt.addClass c
-    trackme = true
-    drawAll()
+    globals.setTrackme(true)
+
+initSocket = () ->
+  remote = 'http://104.131.55.190:9001/';
+  globals.sock =  io.connect(remote);
+  globals.sock.on "connect", () ->
+    console.log("connected")
+  globals.sock.on events.success, ->
+    [h,t...] = globals.nextResult
+    if h? then h(true)
+    globals.nextResult = t;
+
+  globals.sock.on events.failure, ->
+    [h,t...] = globals.nextResult
+    if h? then h(false)
+    globals.nextResult = t;
 
 
-handleLogin = ()->
+
+
+handleLogin = () ->
   $("body").pagecontainer("change", "#login", {role: "dialog"})
-  $("#submit").on "click", ()->
-    console.log("LOL")
+  $("#submit").on "click", ->
+    globals.sock.emit events.logindriver, [$("#email").val(), $("#password").val()]
+    globals.nextResult.push (success)->
+      if success then $("body").pagecontainer("change", "")
+      else $("#login-failed").show();
+
+removeScrolling = () ->
+  document.addEventListener 'touchmove', ((e)-> e.preventDefault()) , false
+
+addPanelMenu = () ->
+  $.event.special.swipe.horizontalDistanceThreshold = 12;
+  $("#main-page").on "swiperight", () ->
+    $("#directions-panel").panel("open")
+
+  $(document).on 'click', '#menu-bt', ()->
+    $.mobile.activePage.find('#directions-panel').panel("open")
+
+  $(document).on 'click', '#panel-menu-bt', ()->
+    $.mobile.activePage.find('#directions-panel').panel("close")
+
+setGPSPositionUpdate = () ->
+  globals.gps.every(60000, (a,b) => globals.sock.emit(events.position, [b.coords.latitude, b.coords.longitude]))
+  0
+
+
+
+addPanelTabRouting = () ->
+  $(".page-tab").bind "click", (e) ->
+    console.log "Click"
+    loadPage(e.target.id)
+
+loadPage = (page, cb)->
+  $("#cont").load "html/#{page}.html", ->
+    pages[page + ".html"].init()
+    if cb then cb()

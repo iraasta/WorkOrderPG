@@ -1,12 +1,8 @@
 body, html {
   height: 100%;
   background-color: #fafafa;
-  font: 100% Helvetica, sans-serif; }
-
-.page-map {
-  width: 100%;
-  height: 93%;
-  padding: 0; }
+  font: 100% Helvetica, sans-serif;
+  overflow: auto; }
 
 .page-map {
   width: 100%;
@@ -19,8 +15,8 @@ body, html {
   padding: 0; }
 
 #map-canvas {
-  width: 90%;
-  height: 97%;
+  width: 100%;
+  height: 100%;
   margin: 0 auto; }
 
 #sockready {
@@ -47,3 +43,7 @@ body, html {
 #menu-bt {
   height: 15px;
   margin: 0 auto; }
+
+#login-failed {
+  display: none;
+  color: red; }
